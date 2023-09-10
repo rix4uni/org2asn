@@ -5,6 +5,7 @@ Extract ASN in bgp.he.net
 ```
 git clone https://github.com/rix4uni/org2asn.git
 cd org2asn
+pip3 install -r requirements.txt
 ```
 
 # Usage
