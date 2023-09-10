@@ -22,8 +22,9 @@ tesla
 yahoo
 ```
 
+# Output
 <details>
-<summary><b>dell output</b></summary>
+<summary><b>dell</b></summary>
 
 ```json
 {
