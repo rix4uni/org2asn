@@ -13,7 +13,9 @@ def get_asn_info(org_name):
     # Extract the rows from the table, skipping the header
     rows = results_table.find_all('tr')[1:]
 
-    results = []
+    details = []
+    num_ASN = 0
+    num_Route = 0
 
     for row in rows:
         columns = row.find_all('td')
@@ -30,15 +32,26 @@ def get_asn_info(org_name):
                 "Type": type_,
                 "Description": description
             }
-            results.append(result_dict)
-    
-    return results
+            details.append(result_dict)
+
+            # Count the number of ASN and Route entries
+            if type_ == "ASN":
+                num_ASN += 1
+            elif type_ == "Route":
+                num_Route += 1
+
+    return {
+        "org": org_name,
+        "num_ASN": num_ASN,
+        "num_Route": num_Route,
+        "details": details
+    }
 
 def main():
     for org_name in sys.stdin:
         org_name = org_name.strip()
-        results = get_asn_info(org_name)
-        print(json.dumps(results, indent=2))
+        result_data = get_asn_info(org_name)
+        print(json.dumps(result_data, indent=2))
 
 if __name__ == "__main__":
     main()
