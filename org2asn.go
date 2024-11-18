@@ -3,13 +3,16 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/rix4uni/org2asn/banner"
 )
 
 type Result struct {
@@ -25,9 +28,9 @@ type ASNInfo struct {
 	Details  []Result `json:"details"`
 }
 
-func getASNInfo(orgName string) (ASNInfo, error) {
+func getASNInfo(client *http.Client, orgName string) (ASNInfo, error) {
 	url := fmt.Sprintf("https://bgp.he.net/search?search%%5Bsearch%%5D=%s&commit=Search", orgName)
-	resp, err := http.Get(url)
+	resp, err := client.Get(url)
 	if err != nil {
 		return ASNInfo{}, err
 	}
@@ -80,26 +83,96 @@ func getASNInfo(orgName string) (ASNInfo, error) {
 	}, nil
 }
 
-func main() {
-	scanner := bufio.NewScanner(os.Stdin)
+func readOrgNamesFromFile(filePath string) ([]string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var orgNames []string
+	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		orgName := strings.TrimSpace(scanner.Text())
-		asnInfo, err := getASNInfo(orgName)
+		if orgName != "" {
+			orgNames = append(orgNames, orgName)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return orgNames, nil
+}
+
+func main() {
+	version := flag.Bool("version", false, "Print the version of the tool and exit.")
+	silent := flag.Bool("silent", false, "Silent mode.")
+	orgFlag := flag.String("org", "", "Organization name to search ASN info for.")
+	listFlag := flag.String("list", "", "File with list of organization names to search ASN info for.")
+	outputJSON := flag.Bool("json", false, "Output in JSON format.")
+	timeout := flag.Int("timeout", 10, "Timeout for each HTTP request in seconds.")
+	rateLimit := flag.Int("rate-limit", 0, "Rate limit in seconds between requests.")
+	flag.Parse()
+
+	if *version {
+		banner.PrintBanner()
+		banner.PrintVersion()
+		return
+	}
+
+	if !*silent {
+		banner.PrintBanner()
+	}
+
+	// HTTP client with timeout
+	client := &http.Client{
+		Timeout: time.Duration(*timeout) * time.Second,
+	}
+
+	// Determine input source
+	var orgNames []string
+	if *orgFlag != "" {
+		orgNames = append(orgNames, *orgFlag)
+	} else if *listFlag != "" {
+		var err error
+		orgNames, err = readOrgNamesFromFile(*listFlag)
+		if err != nil {
+			log.Fatalf("Error reading organization list from file: %v", err)
+		}
+	} else {
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			orgNames = append(orgNames, strings.TrimSpace(scanner.Text()))
+		}
+		if err := scanner.Err(); err != nil {
+			log.Fatalf("Error reading input: %v", err)
+		}
+	}
+
+	// Process each organization with rate limiting
+	for _, orgName := range orgNames {
+		asnInfo, err := getASNInfo(client, orgName)
 		if err != nil {
 			log.Printf("Error fetching ASN info for %s: %v\n", orgName, err)
 			continue
 		}
 
-		// Print the result as formatted JSON
-		jsonData, err := json.MarshalIndent(asnInfo, "", "  ")
-		if err != nil {
-			log.Printf("Error marshalling JSON: %v\n", err)
-			continue
+		if *outputJSON {
+			// Print the result as formatted JSON
+			jsonData, err := json.MarshalIndent(asnInfo, "", "  ")
+			if err != nil {
+				log.Printf("Error marshalling JSON: %v\n", err)
+				continue
+			}
+			fmt.Println(string(jsonData))
+		} else {
+			// Print in plain text
+			for _, detail := range asnInfo.Details {
+				fmt.Printf("[%s] [%s] [%s] [%s]\n", asnInfo.Org, detail.Result, detail.Type, detail.Description)
+			}
 		}
-		fmt.Println(string(jsonData))
-	}
 
-	if err := scanner.Err(); err != nil {
-		log.Fatalf("Error reading input: %v", err)
+		// Apply rate limiting
+		time.Sleep(time.Duration(*rateLimit) * time.Second)
 	}
 }
