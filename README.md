@@ -9,9 +9,9 @@ go install github.com/rix4uni/org2asn@latest
 
 ## Download prebuilt binaries
 ```
-wget https://github.com/rix4uni/org2asn/releases/download/v0.0.2/org2asn-linux-amd64-0.0.2.tgz
-tar -xvzf org2asn-linux-amd64-0.0.2.tgz
-rm -rf org2asn-linux-amd64-0.0.2.tgz
+wget https://github.com/rix4uni/org2asn/releases/download/v0.0.3/org2asn-linux-amd64-0.0.3.tgz
+tar -xvzf org2asn-linux-amd64-0.0.3.tgz
+rm -rf org2asn-linux-amd64-0.0.3.tgz
 mv org2asn ~/go/bin/org2asn
 ```
 Or download [binary release](https://github.com/rix4uni/org2asn/releases) for your platform.
@@ -55,6 +55,17 @@ tesla
 yahoo
 
 ▶ cat orgnames.txt | org2asn
+```
+
+Manually Recursive ORG Search
+- Note: make sure you remove manually this will not take too much time, warning you automate this you will lose some results i already tried this and that's why i didn't added this feature.
+```
+echo "walmart" | org2asn -silent | unew walmart_org2asn.txt
+
+# For advanced use and recursion, remove those not belong to your comapny in walmart_org2asn.txt and run.
+cat walmart_org2asn.txt | cut -d"[" -f5 | sed 's/]$//' | org2asn -silent | unew walmart_org2asn.txt
+
+# now remove those not belong to your comapny in walmart_org2asn.txt.
 ```
 
 ## `plain-text` Output

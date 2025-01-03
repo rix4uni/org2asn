@@ -29,7 +29,10 @@ type ASNInfo struct {
 }
 
 func getASNInfo(client *http.Client, orgName string) (ASNInfo, error) {
-	url := fmt.Sprintf("https://bgp.he.net/search?search%%5Bsearch%%5D=%s&commit=Search", orgName)
+	// Replace spaces with '+'
+    query := strings.Replace(orgName, " ", "+", -1)
+	url := fmt.Sprintf("https://bgp.he.net/search?search%%5Bsearch%%5D=%s&commit=Search", query)
+
 	resp, err := client.Get(url)
 	if err != nil {
 		return ASNInfo{}, err
@@ -110,7 +113,7 @@ func main() {
 	orgFlag := flag.String("org", "", "Organization name to search ASN info for.")
 	listFlag := flag.String("list", "", "File with list of organization names to search ASN info for.")
 	outputJSON := flag.Bool("json", false, "Output in JSON format.")
-	timeout := flag.Int("timeout", 10, "Timeout for each HTTP request in seconds.")
+	timeout := flag.Int("timeout", 15, "Timeout for each HTTP request in seconds.")
 	rateLimit := flag.Int("rate-limit", 0, "Rate limit in seconds between requests.")
 	flag.Parse()
 
